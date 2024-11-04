@@ -3,6 +3,7 @@ package snmptraptest
 import (
 	"sync"
 
+	"github.com/influxdata/kapacitor/services/snmptrap"
 	"github.com/k-sone/snmpgo"
 )
 
@@ -18,7 +19,7 @@ type Server struct {
 	srv    *snmpgo.TrapServer
 }
 
-func NewServer() (*Server, error) {
+func NewServer(config snmptrap.Config) (*Server, error) {
 	addr := "127.0.0.1:9162"
 	srv, err := snmpgo.NewTrapServer(snmpgo.ServerArguments{
 		LocalAddr: addr,
@@ -27,20 +28,35 @@ func NewServer() (*Server, error) {
 		return nil, err
 	}
 	s := &Server{
-		srv:       srv,
-		Addr:      addr,
-		Community: "public",
+		srv:  srv,
+		Addr: addr,
 	}
-	s.srv.AddSecurity(&snmpgo.SecurityEntry{
-		Version:   snmpgo.V2c,
-		Community: s.Community,
-	})
+	if config.Version == 2 {
+		s.Community = config.Community
+		s.srv.AddSecurity(&snmpgo.SecurityEntry{
+			Version:   snmpgo.V2c,
+			Community: s.Community,
+		})
+	} else {
+		s.srv.AddSecurity(&snmpgo.SecurityEntry{
+			Version:       snmpgo.V3,
+			UserName:      config.UserName,
+			SecurityLevel: snmptrap.SecurityLevels(config.SecurityLevel),
+			AuthPassword:  config.AuthPassword,
+			PrivPassword:  config.PrivPassword,
+			PrivProtocol:  snmptrap.PrivProtocols(config.PrivProtocol),
+			AuthProtocol:  snmptrap.AuthProtocols(config.AuthProtocol),
+		})
+	}
+
 	s.wg.Add(1)
 	go func() {
 		defer s.wg.Done()
 		s.srv.Serve(s)
 	}()
+
 	return s, nil
+
 }
 
 func (s *Server) Traps() []Trap {

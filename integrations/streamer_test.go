@@ -11116,8 +11116,9 @@ stream
 			},
 		},
 	}
+	config := snmptrap.Config{Version: 2}
 
-	snmpServer, err := snmptraptest.NewServer()
+	snmpServer, err := snmptraptest.NewServer(config)
 	if err != nil {
 		t.Fatal(err)
 	}

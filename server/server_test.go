@@ -67,6 +67,7 @@ import (
 	"github.com/influxdata/kapacitor/services/slack"
 	"github.com/influxdata/kapacitor/services/slack/slacktest"
 	"github.com/influxdata/kapacitor/services/smtp/smtptest"
+	"github.com/influxdata/kapacitor/services/snmptrap"
 	"github.com/influxdata/kapacitor/services/snmptrap/snmptraptest"
 	"github.com/influxdata/kapacitor/services/swarm"
 	"github.com/influxdata/kapacitor/services/talk/talktest"
@@ -11569,7 +11570,8 @@ func TestServer_AlertHandlers(t *testing.T) {
 				},
 			},
 			setup: func(c *server.Config, ha *client.TopicHandler) (context.Context, error) {
-				ts, err := snmptraptest.NewServer()
+				config := snmptrap.Config{Version: 2, Community: "public"}
+				ts, err := snmptraptest.NewServer(config)
 				if err != nil {
 					return nil, err
 				}
@@ -11619,6 +11621,76 @@ func TestServer_AlertHandlers(t *testing.T) {
 				return nil
 			},
 		},
+		// {
+		// 	handler: client.TopicHandler{
+		// 		Kind: "snmptrap",
+		// 		Options: map[string]interface{}{
+		// 			"trap-oid": "1.1.2",
+		// 			"data-list": []map[string]string{
+		// 				{
+		// 					"oid":   "1.1.2.1",
+		// 					"type":  "s",
+		// 					"value": "{{.Message}}",
+		// 				},
+		// 				{
+		// 					"oid":   "1.1.2.2",
+		// 					"type":  "s",
+		// 					"value": "{{.Level}}",
+		// 				},
+		// 			},
+		// 		},
+		// 	},
+		// 	setup: func(c *server.Config, ha *client.TopicHandler) (context.Context, error) {
+		// 		ts, err := snmptraptest.NewServer(3,"","","","","","","")
+		// 		if err != nil {
+		// 			return nil, err
+		// 		}
+		// 		ctxt := context.WithValue(context.Background(), testCtxStr("server"), ts)
+
+		// 		c.SNMPTrap.Enabled = true
+		// 		c.SNMPTrap.Addr = ts.Addr
+		// 		c.SNMPTrap.Community = ts.Community
+		// 		c.SNMPTrap.Retries = 3
+		// 		return ctxt, nil
+		// 	},
+		// 	result: func(ctxt context.Context) error {
+		// 		ts := ctxt.Value(testCtxStr("server")).(*snmptraptest.Server)
+		// 		ts.Close()
+		// 		got := ts.Traps()
+		// 		exp := []snmptraptest.Trap{{
+		// 			Pdu: snmptraptest.Pdu{
+		// 				Type:        snmpgo.SNMPTrapV2,
+		// 				ErrorStatus: snmpgo.NoError,
+		// 				VarBinds: snmptraptest.VarBinds{
+		// 					{
+		// 						Oid:   "1.3.6.1.2.1.1.3.0",
+		// 						Value: "1000",
+		// 						Type:  "TimeTicks",
+		// 					},
+		// 					{
+		// 						Oid:   "1.3.6.1.6.3.1.1.4.1.0",
+		// 						Value: "1.1.2",
+		// 						Type:  "Oid",
+		// 					},
+		// 					{
+		// 						Oid:   "1.1.2.1",
+		// 						Value: "message",
+		// 						Type:  "OctetString",
+		// 					},
+		// 					{
+		// 						Oid:   "1.1.2.2",
+		// 						Value: "CRITICAL",
+		// 						Type:  "OctetString",
+		// 					},
+		// 				},
+		// 			},
+		// 		}}
+		// 		if !reflect.DeepEqual(exp, got) {
+		// 			return fmt.Errorf("unexpected snmptrap request:\nexp\n%+v\ngot\n%+v\n", exp, got)
+		// 		}
+		// 		return nil
+		// 	},
+		// },
 		{
 			handler: client.TopicHandler{
 				Kind: "talk",

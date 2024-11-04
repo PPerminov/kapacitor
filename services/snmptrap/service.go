@@ -7,6 +7,7 @@ import (
 	"sync"
 	"sync/atomic"
 	text "text/template"
+	"time"
 
 	"github.com/influxdata/kapacitor/alert"
 	"github.com/influxdata/kapacitor/keyvalue"
@@ -64,12 +65,39 @@ func (s *Service) config() Config {
 }
 
 func (s *Service) loadNewSNMPClient(c Config) error {
-	snmp, err := snmpgo.NewSNMP(snmpgo.SNMPArguments{
-		Version:   snmpgo.V2c,
+	snmpConfig := snmpgo.SNMPArguments{
 		Address:   c.Addr,
-		Retries:   uint(c.Retries),
+		Retries:   c.Retries,
+		Timeout:   time.Duration(c.Timeout) * time.Second,
 		Community: c.Community,
-	})
+		Network:   c.Protocol,
+
+		UserName: c.UserName,
+
+		SecurityLevel: SecurityLevels(c.SecurityLevel),
+
+		AuthProtocol: AuthProtocols(c.AuthProtocol),
+		AuthPassword: c.AuthPassword,
+
+		PrivProtocol: PrivProtocols(c.PrivProtocol),
+		PrivPassword: c.PrivPassword,
+
+		SecurityEngineId: c.SecurityEngineId,
+		ContextEngineId:  c.ContextEngineId,
+		ContextName:      c.ContextName,
+	}
+
+	switch c.Version {
+	case 1:
+		snmpConfig.Version = snmpgo.V1
+	case 2:
+
+		snmpConfig.Version = snmpgo.V2c
+	case 3:
+		snmpConfig.Version = snmpgo.V3
+	}
+
+	snmp, err := snmpgo.NewSNMP(snmpConfig)
 	if err != nil {
 		return errors.Wrap(err, "invalid SNMP configuration")
 	}
